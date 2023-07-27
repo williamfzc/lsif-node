@@ -285,14 +285,19 @@ class DocumentData extends LSIFData<EmitterContext> {
 		this.documentSymbols = DocumentData.EMPTY_ARRAY;
 	}
 
-	private checkClosed(): void {
+	private checkClosed(): boolean {
 		if (this.isClosed) {
-			throw new Error(`Document data for document ${this.document.uri} is already closed`);
+			// throw new Error(`Document data for document ${this.document.uri} is already closed`);
+			return false
 		}
+		return true
 	}
 
 	public begin(): void {
-		this.checkClosed();
+		if (!this.checkClosed()) {
+			return
+		}
+		
 		this.emit(this.document);
 		this.emit(this.vertex.event(EventScope.document, EventKind.begin, this.document));
 	}
@@ -312,24 +317,32 @@ class DocumentData extends LSIFData<EmitterContext> {
 		} else {
 			this.recorded.add(key);
 		}
-		this.checkClosed();
+		if (!this.checkClosed()) {
+			return true
+		}
 		this.emit(range);
 		this.ranges.push(range);
 		return true;
 	}
 
 	public addDiagnostics(diagnostics: lsp.Diagnostic[]): void {
-		this.checkClosed();
+		if (!this.checkClosed()) {
+            return;
+        }
 		this.diagnostics = diagnostics;
 	}
 
 	public addFoldingRanges(foldingRanges: lsp.FoldingRange[]): void {
-		this.checkClosed();
+		if (!this.checkClosed()) {
+            return;
+        }
 		this.foldingRanges = foldingRanges;
 	}
 
 	public addDocumentSymbols(documentSymbols: RangeBasedDocumentSymbol[]): void {
-		this.checkClosed();
+		if (!this.checkClosed()) {
+            return;
+        }
 		this.documentSymbols = documentSymbols;
 	}
 
@@ -342,7 +355,9 @@ class DocumentData extends LSIFData<EmitterContext> {
 	}
 
 	public end(): void {
-		this.checkClosed();
+		if (!this.checkClosed()) {
+			return
+		}
 		if (this.ranges.length > 0 || (!this.rangesEmitted && this.ranges.length === 0)) {
 			this.emit(this.edge.contains(this.document, this.ranges));
 		}
