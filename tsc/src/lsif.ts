@@ -2798,6 +2798,27 @@ class TSProject {
 		return this.getProgram().isSourceFileFromExternalLibrary(sourceFile);
 	}
 
+	public isSourceFileEnvExcluded(sourceFile : ts.SourceFile) : boolean {
+		// ignore, limit in typescript
+		// in some cases, the analyzer will reach RangeError: Maximum call stack size exceeded
+		// https://github.com/prisma/prisma/issues/8535
+		const excludePatterns = process.env.LSIF_EXCLUDE;
+
+		if (! excludePatterns) {
+			return false;
+		}
+
+		const patterns = excludePatterns.split(',');
+		for (const pattern of patterns) {
+			const regex = new RegExp(pattern);
+
+			if (regex.test(sourceFile.fileName)) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	public getCommonSourceDirectory(): string {
 		return tss.Program.getCommonSourceDirectory(this.getProgram());
 	}
@@ -3667,6 +3688,7 @@ class Visitor {
 				diagnostics.push(Converter.asDiagnostic(element as ts.DiagnosticWithLocation));
 			}
 		}
+		 
 		if (diagnostics.length > 0) {
 			documentData.addDiagnostics(diagnostics);
 		}
@@ -3700,7 +3722,8 @@ class Visitor {
 
 	public isFullContentIgnored(sourceFile: ts.SourceFile): boolean {
 		return this.tsProject.isSourceFileDefaultLibrary(sourceFile) ||
-			this.tsProject.isSourceFileFromExternalLibrary(sourceFile);
+			this.tsProject.isSourceFileFromExternalLibrary(sourceFile) ||
+			this.tsProject.isSourceFileEnvExcluded(sourceFile);
 	}
 
 	private visitModuleDeclaration(node: ts.ModuleDeclaration): boolean {
