@@ -3641,18 +3641,15 @@ class Visitor {
 
 	private doVisit<T extends ts.Node>(visit: (node: T) => boolean, endVisit: (node: T) => void, node: T): void {
 		if (visit.call(this, node)) {
-			node.forEachChild(child => this.visit(child));
+			node.forEachChild(child => {
+				try {
+					this.visit(child);
+				} catch (e) {
+					console.warn("fail when visit: " + child.getText() + ", " + e);
+				}
+			});
 		}
 		endVisit.call(this, node);
-		// JS Doc is not visited using forEachChild. So we look if the node
-		// has an attached JSDoc node. If so we traverse that node and see
-		// if we can find any identifiers that have a symbol.
-		const jsDocs = tss.Node.getJsDoc(node);
-		if (jsDocs !== undefined) {
-			for (const jsDoc of jsDocs) {
-				this.traverseJSDoc(jsDoc);
-			}
-		}
 	}
 
 	private visitSourceFile(sourceFile: ts.SourceFile): boolean {
@@ -4013,17 +4010,6 @@ class Visitor {
 	}
 
 	private endVisitGeneric(_node: ts.Node): void {
-	}
-
-	private traverseJSDoc(node: ts.JSDoc): void {
-		const visit = (node: ts.Node): void => {
-			if (ts.isIdentifier(node)) {
-				this.visitIdentifier(node);
-			} else {
-				node.getChildren(this.currentSourceFile).forEach(visit);
-			}
-		};
-		node.getChildren(this.currentSourceFile).forEach(visit);
 	}
 
 	private addDocumentSymbol(node: tss.Node.Declaration): boolean {
